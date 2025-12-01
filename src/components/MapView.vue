@@ -1,13 +1,12 @@
 <template>
   <div class="map-wrapper">
     <div id="map" class="map-canvas"></div>
-
     <div id="hover-tooltip" class="hover-tooltip" ref="tooltipRef"></div>
   </div>
 </template>
 
 <script lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted } from 'vue'
 import Map from 'ol/Map'
 import View from 'ol/View'
 import TileLayer from 'ol/layer/Tile'
@@ -26,6 +25,13 @@ import axios from 'axios'
 import { Overlay } from 'ol'
 import { getMonuments } from '@/services/monumentsService'
 
+// Declare global variable
+declare global {
+  interface Window {
+    routeTooltipOverlay?: Overlay
+  }
+}
+
 let userLat = 0
 let userLon = 0
 
@@ -35,8 +41,7 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const dLon = ((lon2 - lon1) * Math.PI) / 180
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
@@ -45,7 +50,9 @@ export default {
   emits: ['nearest-monuments'],
 
   setup(_, { emit }) {
-    const nearestMonuments = ref([])
+    const nearestMonuments = ref<
+      Array<{ name: string; lat: number; lon: number; distance: number }>
+    >([])
     const tooltipRef = ref<HTMLElement | null>(null)
     let selectedMonumentName = ''
     let map: Map | null = null
@@ -55,79 +62,70 @@ export default {
     let monumentsLayer: VectorLayer | null = null
 
     async function drawRouteTo(lon: number, lat: number) {
-  if (!map) return
+      if (!map) return
 
-  const drivingURL = `https://router.project-osrm.org/route/v1/driving/${userLon},${userLat};${lon},${lat}?overview=full&geometries=geojson`
+      const drivingURL = `https://router.project-osrm.org/route/v1/driving/${userLon},${userLat};${lon},${lat}?overview=full&geometries=geojson`
 
-  try {
-    // Fetch driving route
-    const res = await axios.get(drivingURL)
-    if (!res.data.routes?.length) {
-      alert('No route found!')
-      return
+      try {
+        const res = await axios.get(drivingURL)
+        if (!res.data.routes?.length) {
+          alert('No route found!')
+          return
+        }
+
+        const route = res.data.routes[0]
+        const distanceKm = res.data.routes[0].distance / 1000
+        const timeMin = Math.round(route.duration / 60)
+
+        const coords = route.geometry.coordinates
+        const transformed = coords.map(([lo, la]: [number, number]) => fromLonLat([lo, la]))
+        const routeGeometry = new LineString(transformed)
+        const routeFeature = new Feature({ geometry: routeGeometry })
+
+        if (routeLayer && map) {
+          map.removeLayer(routeLayer)
+          routeLayer = null
+        }
+
+        routeLayer = new VectorLayer({
+          source: new VectorSource({ features: [routeFeature] }),
+          style: new Style({
+            stroke: new Stroke({ color: '#ff3b30', width: 5 }),
+          }),
+        })
+
+        map.addLayer(routeLayer)
+        map.getView().fit(routeGeometry.getExtent(), { padding: [60, 60, 120, 60] })
+
+        const tooltip = document.createElement('div')
+        tooltip.className = 'hover-tooltip'
+        tooltip.innerHTML = `
+          <strong>${selectedMonumentName}</strong>
+          <div style="font-size:12px;color:#000000;margin-top:4px">
+            ${distanceKm.toFixed(2)} km, ${timeMin} min
+          </div>
+        `
+
+        if (window.routeTooltipOverlay) {
+          map.removeOverlay(window.routeTooltipOverlay)
+        }
+
+        const midpoint = routeGeometry.getCoordinateAt(0.5)
+        const overlay = new Overlay({
+          element: tooltip,
+          positioning: 'bottom-center',
+          offset: [0, -10],
+        })
+
+        window.routeTooltipOverlay = overlay
+        map.addOverlay(overlay)
+        overlay.setPosition(midpoint)
+        tooltip.style.display = 'block'
+      } catch (err) {
+        console.error(err)
+        alert('Failed to fetch route!')
+      }
     }
-
-    const route = res.data.routes[0]
-    const distanceKm = route.distance / 1000
-    const timeMin = Math.round(route.duration / 60)
-
-    const coords = route.geometry.coordinates
-    const transformed = coords.map(([lo, la]: [number, number]) => fromLonLat([lo, la]))
-    const routeGeometry = new LineString(transformed)
-    const routeFeature = new Feature({ geometry: routeGeometry })
-
-    // Remove previous route layer
-    if (routeLayer && map) {
-      map.removeLayer(routeLayer)
-      routeLayer = null
-    }
-
-    routeLayer = new VectorLayer({
-      source: new VectorSource({ features: [routeFeature] }),
-      style: new Style({
-        stroke: new Stroke({ color: '#ff3b30', width: 5 }),
-      }),
-    })
-
-    map.addLayer(routeLayer)
-    map.getView().fit(routeGeometry.getExtent(), { padding: [60, 60, 120, 60] })
-
-    // Tooltip
-    const tooltip = document.createElement('div')
-    tooltip.className = 'hover-tooltip'
-    tooltip.innerHTML = `
-      <strong>${selectedMonumentName}</strong>
-      <div style="font-size:12px;color:#000000;margin-top:4px">
-        ${distanceKm.toFixed(2)} km, ${timeMin} min
-      </div>
-    `
-
-    // Remove previous tooltip overlay
-    if (window.routeTooltipOverlay) {
-      map.removeOverlay(window.routeTooltipOverlay)
-    }
-
-    const midpoint = routeGeometry.getCoordinateAt(0.5)
-    const overlay = new Overlay({
-      element: tooltip,
-      positioning: 'bottom-center',
-      offset: [0, -10],
-    })
-
-    window.routeTooltipOverlay = overlay
-    map.addOverlay(overlay)
-    overlay.setPosition(midpoint)
-    tooltip.style.display = 'block'
-
-  } catch (err) {
-    console.error(err)
-    alert('Failed to fetch route!')
-  }
-}
-
-
-
-
 
     async function loadMonuments() {
       if (!map) return
@@ -138,13 +136,23 @@ export default {
         featureProjection: 'EPSG:3857',
       })
 
-      features.forEach((f) => {
+      console.log('=== DEBUG: Starting monument processing ===')
+      console.log('User location:', userLat, userLon)
+
+      features.forEach((f: Feature, index) => {
         const rawName = f.get('name') || f.get('properties')?.name || 'Unknown Monument'
         f.set('name', rawName)
 
-        const [lon, lat] = toLonLat(f.getGeometry().getCoordinates())
+        const [lon, lat] = toLonLat((f.getGeometry() as Point).getCoordinates())
         const d = haversineDistance(userLat, userLon, lat, lon)
         f.set('distanceKm', d)
+        const wikipediaUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(rawName.replace(/\s+/g, '_'))}`
+    f.set('wikipediaUrl', wikipediaUrl)
+
+        // DEBUG: Log each monument distance
+        console.log(
+          `Monument ${index}: ${rawName} - distance stored in feature: ${d.toFixed(2)} km`,
+        )
 
         f.setStyle(
           new Style({
@@ -165,19 +173,38 @@ export default {
       map.addLayer(monumentsLayer)
 
       const processed = features
-        .map((f: any) => {
-          const [lon, lat] = toLonLat(f.getGeometry().getCoordinates())
-          return { name: f.get('name'), lat, lon, distance: f.get('distanceKm') }
+        .map((f: Feature, index) => {
+          const [lon, lat] = toLonLat((f.getGeometry() as Point).getCoordinates())
+          const featureDistance = f.get('distanceKm')
+          const name = f.get('name')
+
+          // DEBUG: Compare distances
+          console.log(
+            `Monument ${index}: ${name} - distance from feature: ${featureDistance.toFixed(2)} km`,
+          )
+
+          return {
+            name,
+            lat,
+            lon,
+            distance: featureDistance,
+            wikipediaUrl: f.get('wikipediaUrl')
+          }
         })
         .filter((m) => m.distance <= 10)
         .sort((a, b) => a.distance - b.distance)
+
+      // DEBUG: Show final processed array
+      console.log('=== Final processed monuments ===')
+      processed.forEach((m, i) => {
+        console.log(`${i}: ${m.name} - ${m.distance.toFixed(2)} km`)
+      })
 
       nearestMonuments.value = processed
       emit('nearest-monuments', processed)
 
       attachHoverHandler()
     }
-
     function attachHoverHandler() {
       if (!map || !tooltipRef.value) return
 
@@ -190,27 +217,57 @@ export default {
         map.addOverlay(tooltipOverlay)
       }
 
-      map.getViewport().style.cursor = ''
+      const viewport = map.getViewport()
+      if (viewport) {
+        viewport.style.cursor = ''
+      }
 
       map.on('pointermove', (evt) => {
         if (evt.dragging) {
-          tooltipRef.value!.style.display = 'none'
+          if (tooltipRef.value) {
+            tooltipRef.value.style.display = 'none'
+          }
           return
         }
 
-        const feature = map!.forEachFeatureAtPixel(evt.pixel, (f) => f, { hitTolerance: 6 })
+        const feature = map!.forEachFeatureAtPixel(evt.pixel, (f: Feature) => f, {
+          hitTolerance: 6,
+        })
 
         if (feature && feature.get('name')) {
           const name = feature.get('name')
-          const dist = (feature.get('distanceKm') || 0).toFixed(2)
 
-          tooltipRef.value!.innerHTML = `<strong>${name}</strong><div style="font-size:12px;color:#d6d6d6;margin-top:4px">${dist} km</div>`
-          tooltipRef.value!.style.display = 'block'
-          tooltipOverlay!.setPosition(evt.coordinate)
-          map!.getViewport().style.cursor = 'pointer'
+          // ✅ FIX: Get distance from nearestMonuments instead of feature
+          let dist = 0
+          const monumentInList = nearestMonuments.value.find((m) => m.name === name)
+          if (monumentInList) {
+            dist = monumentInList.distance // Use the distance from the list
+          } else {
+            dist = feature.get('distanceKm') || 0 // Fallback
+          }
+
+          if (tooltipRef.value) {
+            tooltipRef.value.innerHTML = `<strong>${name}</strong><div style="font-size:12px;color:#d6d6d6;margin-top:4px">${dist.toFixed(2)} km</div>`
+            tooltipRef.value.style.display = 'block'
+          }
+
+          if (tooltipOverlay) {
+            tooltipOverlay.setPosition(evt.coordinate)
+          }
+
+          const viewport = map!.getViewport()
+          if (viewport) {
+            viewport.style.cursor = 'pointer'
+          }
         } else {
-          tooltipRef.value!.style.display = 'none'
-          map!.getViewport().style.cursor = ''
+          if (tooltipRef.value) {
+            tooltipRef.value.style.display = 'none'
+          }
+
+          const viewport = map!.getViewport()
+          if (viewport) {
+            viewport.style.cursor = ''
+          }
         }
       })
     }
@@ -231,7 +288,7 @@ export default {
         const userLayer = new VectorLayer({ source: new VectorSource({ features: [userFeature] }) })
         map.addLayer(userLayer)
       } else {
-        userFeature.getGeometry().setCoordinates(fromLonLat([userLon, userLat]))
+        ;(userFeature.getGeometry() as Point).setCoordinates(fromLonLat([userLon, userLat]))
       }
     }
 
@@ -242,22 +299,20 @@ export default {
         view: new View({ center: fromLonLat([0, 0]), zoom: 12 }),
       })
 
-      nextTick(() => {})
-
-      // ➤ ADDED FOR TAP-TO-ROUTE
+      // TAP-TO-ROUTE
       map.on('click', (evt) => {
-        const feature = map!.forEachFeatureAtPixel(evt.pixel, (f) => f, { hitTolerance: 6 })
+        const feature = map!.forEachFeatureAtPixel(evt.pixel, (f: Feature) => f, {
+          hitTolerance: 6,
+        })
         if (feature && feature.get('name')) {
-            selectedMonumentName = feature.get('name')
-          
-          }
+          selectedMonumentName = feature.get('name')
+        }
 
         if (feature && feature.get('name')) {
-          const [lon, lat] = toLonLat(feature.getGeometry().getCoordinates())
+          const [lon, lat] = toLonLat((feature.getGeometry() as Point).getCoordinates())
           drawRouteTo(lon, lat)
         }
       })
-      // ➤ END
 
       document.addEventListener('draw-route', (e: any) => {
         if (e?.detail?.lon !== undefined && e?.detail?.lat !== undefined) {
@@ -297,8 +352,10 @@ export default {
       } else {
         userLat = 52.52
         userLon = 13.405
-        map.getView().setCenter(fromLonLat([userLon, userLat]))
-        map.getView().setZoom(12)
+        if (map) {
+          map.getView().setCenter(fromLonLat([userLon, userLat]))
+          map.getView().setZoom(12)
+        }
         updateUserMarker()
         loadMonuments()
       }
@@ -309,40 +366,36 @@ export default {
 }
 </script>
 
-<style>
-/* unchanged styles */
-.map-wrapper {
+<style>.map-wrapper {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: stretch;
-  justify-content: center;
 }
 
 .map-canvas {
   width: 100%;
   height: 100%;
-  max-width: 1100px;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
 }
 
+/* MOBILE: map takes ~55vh */
+@media (max-width: 879px) {
+  .map-canvas {
+    height: 55vh;
+  }
+}
+
+/* TOOLTIP */
 .hover-tooltip {
   position: absolute;
   background: rgba(255, 251, 251, 0.95);
-  color: #040404;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;
-  line-height: 1.15;
   display: none;
   pointer-events: none;
-  width: 100px;
   z-index: 9999;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(0, 0, 0, 0.04);
 }
 </style>
-
