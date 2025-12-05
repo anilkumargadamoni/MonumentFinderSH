@@ -1,9 +1,20 @@
 <template>
   <div class="nearest-wrap">
-    <ul v-if="monuments && monuments.length" class="monuments">
-      <li v-for="(m, idx) in monuments.slice(0, 3)" :key="m.name + idx" class="mon-card">
+    <ul
+      v-if="monuments && monuments.length"
+      class="monuments"
+      role="list"
+      aria-label="List of nearby monuments"
+    >
+      <li
+        v-for="(m, idx) in monuments.slice(0, 3)"
+        :key="`${m.name}-${idx}`"
+        class="mon-card"
+        role="listitem"
+        :aria-label="`${m.name}, ${m.distance.toFixed(2)} kilometers away`"
+      >
         <div class="card-left">
-          <div class="icon-wrap">
+          <div class="icon-wrap" aria-hidden="true">
             <svg viewBox="0 0 24 24" class="mon-icon" aria-hidden="true">
               <path
                 fill="currentColor"
@@ -16,8 +27,14 @@
         <div class="card-body">
           <div class="title-row">
             <div class="name">{{ m.name }}</div>
-            <button class="info-icon-btn" @click="openWikipedia(m)" title="Open Wikipedia">
-              <svg viewBox="0 0 24 24" class="info-icon">
+            <button
+              class="info-icon-btn"
+              @click="openWikipedia(m)"
+              :aria-label="`Open Wikipedia page for ${m.name}`"
+              :title="`Learn more about ${m.name} on Wikipedia`"
+            >
+              <span class="sr-only">Open Wikipedia for {{ m.name }}</span>
+              <svg viewBox="0 0 24 24" class="info-icon" aria-hidden="true">
                 <path
                   fill="currentColor"
                   d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
@@ -26,22 +43,26 @@
             </button>
           </div>
 
-          <div class="meta-row">
-            <div class="meta">
-              Distance: <strong>{{ m.distance.toFixed(2) }} km</strong>
-            </div>
-          </div>
-
           <div class="button-row">
-            <button class="btn route" @click="showRoute(m)">
-              <svg class="btn-icon" viewBox="0 0 24 24">
+            <button
+              class="btn route"
+              @click="showRoute(m)"
+              :aria-label="`Show route to ${m.name}`"
+              :title="`Display route on map to ${m.name}`"
+            >
+              <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="currentColor" d="M12 2l4 4-6 6L6 8l6-6zM3 21V13l4 4-4 4z" />
               </svg>
               Show Route
             </button>
 
-            <button class="btn nav" @click="navigate(m)">
-              <svg class="btn-icon" viewBox="0 0 24 24">
+            <button
+              class="btn nav"
+              @click="navigate(m)"
+              :aria-label="`Open navigation to ${m.name} in Google Maps`"
+              :title="`Navigate to ${m.name} using Google Maps`"
+            >
+              <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   fill="currentColor"
                   d="M12 2L2 7l10 5 10-5-10-5zm0 7.2L6.5 7.1 12 5.1 17.5 7.1 12 9.2zM2 17l10 5 10-5-10-5L2 17z"
@@ -54,44 +75,58 @@
       </li>
     </ul>
 
-    <p v-else class="empty">No nearby monuments found.</p>
+    <p v-else class="empty" role="status" aria-live="polite">No nearby monuments found</p>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, PropType } from 'vue'
 
+interface Monument {
+  name: string
+  lat: number
+  lon: number
+  distance: number
+  wikipediaUrl?: string
+}
+
 export default defineComponent({
   name: 'NearestList',
   props: {
     monuments: {
-      type: Array as PropType<
-        Array<{
-          name: string
-          lat: number
-          lon: number
-          distance: number
-          wikipediaUrl?: string
-        }>
-      >,
+      type: Array as PropType<Monument[]>,
+      required: true,
+      validator: (value: Monument[]) => {
+        return Array.isArray(value)
+      },
+    },
+    routeHandler: {
+      type: Function as PropType<(coordinates: [number, number]) => void>,
       required: true,
     },
-    routeHandler: { type: Function, required: true },
   },
+
   methods: {
-    showRoute(monument: any) {
-      this.routeHandler([monument.lon, monument.lat])
-    },
-    navigate(monument: any) {
+ showRoute(monument: Monument): void {
+  this.routeHandler({
+    lon: monument.lon,
+    lat: monument.lat,
+    name: monument.name
+  });
+},
+
+
+    navigate(monument: Monument): void {
       const url = `https://www.google.com/maps/dir/?api=1&destination=${monument.lat},${monument.lon}`
-      window.open(url, '_blank')
+      window.open(url, '_blank', 'noopener,noreferrer')
     },
-    openWikipedia(monument: any) {
+
+    openWikipedia(monument: Monument): void {
       if (monument.wikipediaUrl) {
-        window.open(monument.wikipediaUrl, '_blank')
+        window.open(monument.wikipediaUrl, '_blank', 'noopener,noreferrer')
       } else {
         const searchUrl = `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(monument.name)}`
-        window.open(searchUrl, '_blank')
+        window.open(searchUrl, '_blank', 'noopener,noreferrer')
       }
     },
   },
@@ -99,6 +134,19 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ───────────────────────────────
    Nearest List – responsive layout
    ─────────────────────────────── */
@@ -138,6 +186,10 @@ export default defineComponent({
 .mon-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+}
+
+:deep(.mon-card:focus-within) {
+  outline: 2px solid #1a73e8;
 }
 
 /* Left icon */
@@ -198,6 +250,11 @@ export default defineComponent({
   background-color: rgba(255, 255, 255, 0.08);
 }
 
+:deep(.info-icon-btn:focus-visible) {
+  outline: 2px solid #4f8cff;
+  outline-offset: 2px;
+}
+
 .info-icon {
   width: 18px;
   height: 18px;
@@ -215,12 +272,12 @@ export default defineComponent({
   display: flex;
   gap: 8px;
   margin-top: 10px;
-  flex-wrap: wrap; /* ⭐ Responsive */
+  flex-wrap: wrap;
 }
 
 .btn {
-  flex: 1 1 48%; /* ⭐ 2 buttons side-by-side on mobile */
-  min-width: 120px; /* Prevent super small buttons */
+  flex: 1 1 48%;
+  min-width: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,6 +296,11 @@ export default defineComponent({
 .btn:hover {
   transform: translateY(-2px);
   opacity: 0.9;
+}
+
+:deep(.btn:focus-visible) {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
 }
 
 .btn.route {
@@ -294,7 +356,35 @@ export default defineComponent({
 @media (min-width: 880px) {
   .btn {
     flex: initial;
-    min-width: auto; /* Let the desktop buttons shrink to text width */
+    min-width: auto;
+  }
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+  .mon-card {
+    border: 2px solid #fff;
+    background: #000;
+  }
+
+  .btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .mon-card,
+  .btn {
+    transition: none;
+  }
+
+  .mon-card:hover {
+    transform: none;
+  }
+
+  .btn:hover {
+    transform: none;
   }
 }
 </style>
