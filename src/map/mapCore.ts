@@ -9,9 +9,11 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import Icon from "ol/style/Icon";
 import Style from "ol/style/Style";
-import { Overlay } from "ol";
 
-export function createMap(targetId: string) {
+/**
+ * Create base map
+ */
+export function createMap(targetId: string): Map {
   return new Map({
     target: targetId,
     layers: [new TileLayer({ source: new OSM() })],
@@ -23,8 +25,13 @@ export function createMap(targetId: string) {
   });
 }
 
-export function updateUserMarker(map: any, lat: number, lon: number) {
-  const point = new Feature(new Point(fromLonLat([lon, lat])));
+/**
+ * Add or update the user position marker
+ */
+export function updateUserMarker(map: Map, lat: number, lon: number): void {
+  const point = new Feature({
+    geometry: new Point(fromLonLat([lon, lat])),
+  });
 
   point.setStyle(
     new Style({
@@ -36,20 +43,28 @@ export function updateUserMarker(map: any, lat: number, lon: number) {
   );
 
   const layer = new VectorLayer({
-    source: new VectorSource({ features: [point] }),
+    source: new VectorSource({
+      features: [point],
+    }),
   });
 
   map.addLayer(layer);
 }
 
-export function enableKeyboardNavigation(map: any) {
+/**
+ * Enable keyboard navigation (zoom + arrow keys)
+ */
+export function enableKeyboardNavigation(map: Map): void {
   const viewport = map.getViewport();
   viewport.setAttribute("tabindex", "0");
 
-  viewport.addEventListener("keydown", (e) => {
+  viewport.addEventListener("keydown", (e: KeyboardEvent) => {
     const view = map.getView();
-    const zoom = view.getZoom() || 12;
-    const center = view.getCenter()!;
+    const zoom = view.getZoom() ?? 12;
+    const center = view.getCenter();
+
+    if (!center) return;
+
     const amount = 100000 / Math.pow(2, zoom - 1);
 
     switch (e.key) {
