@@ -37,7 +37,7 @@ export function processMonuments(
     if (!(geom instanceof Point)) return
 
     const [lon, lat] = toLonLat(geom.getCoordinates())
-    const distance = haversineDistance(userLat, userLon, lat, lon)
+    const distance = haversineDistance(userLat, userLon, lat!, lon!)
 
     const wikipediaUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(
       name.replace(/\s+/g, '_')

@@ -80,7 +80,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 
 interface Monument {
   name: string
@@ -134,7 +134,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Screen reader only text */
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -147,9 +147,7 @@ export default defineComponent({
   border: 0;
 }
 
-/* ───────────────────────────────
-   Nearest List – responsive layout
-   ─────────────────────────────── */
+
 
 .nearest-wrap {
   width: 100%;
@@ -158,7 +156,7 @@ export default defineComponent({
   gap: 12px;
 }
 
-/* List spacing */
+
 .monuments {
   list-style: none;
   padding: 0;
@@ -168,7 +166,7 @@ export default defineComponent({
   gap: 12px;
 }
 
-/* Card base */
+
 .mon-card {
   display: flex;
   gap: 12px;
@@ -209,14 +207,14 @@ export default defineComponent({
   color: #f8f9fa;
 }
 
-/* Body */
+
 .card-body {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-/* Title row */
+
 .title-row {
   display: flex;
   justify-content: space-between;
@@ -232,7 +230,7 @@ export default defineComponent({
   flex: 1;
 }
 
-/* Wikipedia icon */
+
 .info-icon-btn {
   background: none;
   border: none;
@@ -260,14 +258,13 @@ export default defineComponent({
   height: 18px;
 }
 
-/* Meta */
+
 .meta-row {
   margin-top: 6px;
   color: #c7c9cc;
   font-size: 13px;
 }
 
-/* Buttons layout */
 .button-row {
   display: flex;
   gap: 8px;
@@ -319,7 +316,6 @@ export default defineComponent({
   color: inherit;
 }
 
-/* Empty state */
 .empty {
   color: #c7c9cc;
   font-size: 14px;
@@ -327,9 +323,6 @@ export default defineComponent({
   text-align: center;
 }
 
-/* ────────────────
-   📱 Mobile tuning
-   ──────────────── */
 @media (max-width: 480px) {
   .mon-card {
     padding: 10px;
@@ -350,9 +343,7 @@ export default defineComponent({
   }
 }
 
-/* ──────────────────────
-   💻 Larger screens tuning
-   ────────────────────── */
+
 @media (min-width: 880px) {
   .btn {
     flex: initial;
@@ -360,7 +351,7 @@ export default defineComponent({
   }
 }
 
-/* High contrast support */
+
 @media (prefers-contrast: high) {
   .mon-card {
     border: 2px solid #fff;
@@ -372,7 +363,6 @@ export default defineComponent({
   }
 }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .mon-card,
   .btn {

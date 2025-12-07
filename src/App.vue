@@ -1,24 +1,26 @@
 <template>
-  <div class="app-layout">
-    <div class="map-column">
-      <MapView @nearest-monuments="updateNearest" />
-    </div>
-
-    <aside class="side-panel" aria-label="Nearby monuments panel">
-      <div class="panel-inner">
-        <header class="panel-header">
-          <h1>Nearby Monuments</h1>
-          <p class="subtitle">Explore places around you</p>
-        </header>
-
-        <NearestList :monuments="filteredMonuments" :route-handler="handleRoute" />
-
-        <div class="panel-footer">
-          <button class="primary-cta" @click="centerOnUser">Re-center</button>
-        </div>
+  <main id="main-content">
+    <div class="app-layout">
+      <div class="map-column">
+        <MapView @nearest-monuments="updateNearest" />
       </div>
-    </aside>
-  </div>
+
+      <aside class="side-panel" aria-label="Nearby monuments panel">
+        <div class="panel-inner">
+          <header class="panel-header">
+            <h1>Nearby Monuments</h1>
+            <p class="subtitle">Explore places around you</p>
+          </header>
+
+          <NearestList :monuments="filteredMonuments" :route-handler="handleRoute" />
+
+          <div class="panel-footer">
+            <button class="primary-cta" @click="centerOnUser">Re-center</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
 </template>
 
 <script lang="ts">

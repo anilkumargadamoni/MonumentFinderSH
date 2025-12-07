@@ -28,9 +28,7 @@ export interface GeoJSONFeatureCollection {
   features: GeoJSONFeature[];
 }
 
-/**
- * Fetch nearby monuments from Overpass API
- */
+
 export async function getMonuments(
   lat: number,
   lon: number,

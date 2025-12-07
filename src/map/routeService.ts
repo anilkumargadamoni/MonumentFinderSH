@@ -32,7 +32,6 @@ export async function drawRoute(
 ): Promise<DrawRouteResult> {
   const { map, userLat, userLon, selectedName } = params;
 
-  // Remove previous overlay and route layer
   removeRouteOverlay(map);
 
   try {
@@ -64,13 +63,11 @@ export async function drawRoute(
     map.addLayer(layer);
     currentRouteLayer = layer;
 
-    // Fit the view to the route
     map.getView().fit(geometry.getExtent(), {
       padding: [80, 80, 80, 80],
       duration: 800,
     });
 
-    // Create tooltip overlay
     const overlayEl = document.createElement("div");
     overlayEl.className = "route-tooltip";
     overlayEl.innerHTML = `
@@ -88,7 +85,6 @@ export async function drawRoute(
       stopEvent: false,
     });
 
-    // Position overlay at the middle of the route
     overlay.setPosition(geometry.getCoordinateAt(0.5));
     map.addOverlay(overlay);
     currentOverlay = overlay;

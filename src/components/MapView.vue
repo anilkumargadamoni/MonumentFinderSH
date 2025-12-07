@@ -1,16 +1,20 @@
 <template>
   <div class="map-wrapper">
-    <div id="map" class="map-canvas" aria-label="Interactive map"></div>
-    
+    <div id="map" class="map-canvas"></div>
+
     <div class="map-controls">
-      <button @click="centerOnUser" class="control-btn location-btn" aria-label="Center on my location">
+      <button
+        @click="centerOnUser"
+        class="control-btn location-btn"
+        aria-label="Center on my location"
+      >
         <svg width="20" height="20" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-          <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="2"/>
-          <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="2"/>
-          <line x1="4" y1="12" x2="8" y2="12" stroke="currentColor" stroke-width="2"/>
-          <line x1="16" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"/>
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
+          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" />
+          <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="2" />
+          <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="2" />
+          <line x1="4" y1="12" x2="8" y2="12" stroke="currentColor" stroke-width="2" />
+          <line x1="16" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
         </svg>
       </button>
       <div class="zoom-controls">
@@ -50,10 +54,11 @@ interface Monument {
 export default defineComponent({
   name: 'MapView',
   emits: ['nearest-monuments'],
-  
+
   setup(_, { emit }) {
     let map: Map | null = null
-    let userLat = 0, userLon = 0
+    let userLat = 0,
+      userLon = 0
 
     const centerOnUser = () => {
       if (!map) return
@@ -64,17 +69,26 @@ export default defineComponent({
           (pos) => {
             userLat = pos.coords.latitude
             userLon = pos.coords.longitude
-            map!.getView().animate({ center: fromLonLat([userLon, userLat]), zoom: 15, duration: 500 })
+            map!
+              .getView()
+              .animate({ center: fromLonLat([userLon, userLat]), zoom: 15, duration: 500 })
             updateUserMarker(map!, userLat, userLon)
           },
-          () => userLat && userLon && map!.getView().animate({ center: fromLonLat([userLon, userLat]), zoom: 15, duration: 500 }),
-          { enableHighAccuracy: true, timeout: 5000 }
+          () =>
+            userLat &&
+            userLon &&
+            map!
+              .getView()
+              .animate({ center: fromLonLat([userLon, userLat]), zoom: 15, duration: 500 }),
+          { enableHighAccuracy: true, timeout: 5000 },
         )
       }
     }
 
-    const zoomIn = () => map?.getView().animate({ zoom: (map.getView().getZoom() || 12) + 1, duration: 200 })
-    const zoomOut = () => map?.getView().animate({ zoom: (map.getView().getZoom() || 12) - 1, duration: 200 })
+    const zoomIn = () =>
+      map?.getView().animate({ zoom: (map.getView().getZoom() || 12) + 1, duration: 200 })
+    const zoomOut = () =>
+      map?.getView().animate({ zoom: (map.getView().getZoom() || 12) - 1, duration: 200 })
 
     const handleDrawRoute = (e: Event) => {
       if (!map) return
@@ -88,6 +102,20 @@ export default defineComponent({
     onMounted(async () => {
       map = createMap('map')
       enableKeyboardNavigation(map)
+      setTimeout(() => {
+        const viewport = document.querySelector('.ol-viewport')
+        if (viewport) {
+          viewport.removeAttribute('role')
+          viewport.removeAttribute('aria-label')
+          viewport.removeAttribute('aria-hidden')
+        }
+
+        document.querySelectorAll('.ol-control, .ol-overlaycontainer, .ol-zoom').forEach((el) => {
+          el.removeAttribute('role')
+          el.removeAttribute('aria-label')
+          el.removeAttribute('aria-hidden')
+        })
+      }, 300)
 
       setTimeout(() => {
         const viewport = document.querySelector('.ol-viewport')
@@ -113,7 +141,8 @@ export default defineComponent({
       }
 
       const fallback = async () => {
-        userLat = 52.52; userLon = 13.405
+        userLat = 52.52
+        userLon = 13.405
         map!.getView().animate({ center: fromLonLat([userLon, userLat]), zoom: 12, duration: 500 })
         updateUserMarker(map!, userLat, userLon)
         const data = await getMonuments(userLat, userLon)
@@ -123,7 +152,9 @@ export default defineComponent({
       }
 
       const handleMapClick = (evt: MapBrowserEvent<MouseEvent>) => {
-        const feature = map!.forEachFeatureAtPixel(evt.pixel, (f: Feature) => f, { hitTolerance: 6 })
+        const feature = map!.forEachFeatureAtPixel(evt.pixel, (f: Feature) => f, {
+          hitTolerance: 6,
+        })
         if (feature?.get('name')) {
           const name = feature.get('name') as string
           const geometry = feature.getGeometry()
@@ -136,7 +167,10 @@ export default defineComponent({
         }
       }
 
-      navigator.geolocation.getCurrentPosition(success, fallback, { enableHighAccuracy: true, timeout: 10000 })
+      navigator.geolocation.getCurrentPosition(success, fallback, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+      })
     })
 
     onUnmounted(() => {
@@ -149,13 +183,23 @@ export default defineComponent({
     })
 
     return { centerOnUser, zoomIn, zoomOut }
-  }
+  },
 })
 </script>
 
 <style scoped>
-.map-wrapper { width: 100%; height: 100%; position: relative; }
-.map-canvas { width: 100%; height: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45); }
+.map-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.map-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
 
 .map-controls {
   position: absolute;
@@ -179,8 +223,16 @@ export default defineComponent({
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-.control-btn:hover { background: #f8f8f8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
-.control-btn:active { background: #f0f0f0; transform: translateY(0); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); }
+.control-btn:hover {
+  background: #f8f8f8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.control-btn:active {
+  background: #f0f0f0;
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
 
 .location-btn {
   padding: 8px;
@@ -211,13 +263,31 @@ export default defineComponent({
   border-bottom: 1px solid #eee;
 }
 
-.zoom-controls .control-btn:last-child { border-bottom: none; }
+.zoom-controls .control-btn:last-child {
+  border-bottom: none;
+}
 
 @media (max-width: 768px) {
-  .map-controls { bottom: 12px; right: 12px; gap: 4px; }
-  .location-btn { padding: 6px; min-width: 32px; min-height: 32px; }
-  .zoom-controls .control-btn { padding: 5px 8px; min-width: 32px; min-height: 28px; font-size: 14px; }
-  .location-btn svg { width: 14px; height: 14px; }
+  .map-controls {
+    bottom: 12px;
+    right: 12px;
+    gap: 4px;
+  }
+  .location-btn {
+    padding: 6px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+  .zoom-controls .control-btn {
+    padding: 5px 8px;
+    min-width: 32px;
+    min-height: 28px;
+    font-size: 14px;
+  }
+  .location-btn svg {
+    width: 14px;
+    height: 14px;
+  }
 }
 </style>
 
