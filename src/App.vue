@@ -86,7 +86,7 @@ export default defineComponent({
 </script>
 
 <style>
-/* Accessibility improvements */
+
 :root {
   --primary-color: #1a73e8;
   --primary-dark: #0d62d9;
@@ -113,7 +113,7 @@ export default defineComponent({
   border: 0;
 }
 
-/* Page layout */
+
 .app-layout {
   display: flex;
   flex-direction: column;
@@ -140,7 +140,7 @@ export default defineComponent({
   overflow-y: auto;
 }
 
-/* inner spacing */
+
 .panel-inner {
   display: flex;
   flex-direction: column;
@@ -162,7 +162,7 @@ export default defineComponent({
   font-weight: 400;
 }
 
-/* Search styles */
+
 .search-container {
   position: relative;
   margin-bottom: 8px;
@@ -241,7 +241,6 @@ export default defineComponent({
   transform: translateY(1px);
 }
 
-/* High contrast support */
 @media (prefers-contrast: high) {
   .side-panel {
     background: #000;
@@ -257,7 +256,7 @@ export default defineComponent({
   }
 }
 
-/* Reduced motion */
+
 @media (prefers-reduced-motion: reduce) {
   .app-layout,
   .primary-cta {
@@ -269,7 +268,7 @@ export default defineComponent({
   }
 }
 
-/* Laptop / Desktop: side-by-side */
+
 @media (min-width: 880px) {
   .app-layout {
     flex-direction: row;
@@ -297,7 +296,6 @@ export default defineComponent({
   }
 }
 
-/* Ensure text contrast meets WCAG AA (4.5:1) */
 @media (max-width: 879px) {
   .panel-header h1 {
     font-size: 20px;
