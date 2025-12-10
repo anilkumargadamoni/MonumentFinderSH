@@ -147,15 +147,12 @@ export default defineComponent({
   border: 0;
 }
 
-
-
 .nearest-wrap {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-
 
 .monuments {
   list-style: none;
@@ -165,7 +162,6 @@ export default defineComponent({
   flex-direction: column;
   gap: 12px;
 }
-
 
 .mon-card {
   display: flex;
@@ -190,7 +186,6 @@ export default defineComponent({
   outline: 2px solid #1a73e8;
 }
 
-/* Left icon */
 .icon-wrap {
   min-width: 44px;
   min-height: 44px;

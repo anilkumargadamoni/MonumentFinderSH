@@ -44,13 +44,21 @@ export default defineComponent({
     const nearestThree = ref<Monument[]>([])
     const searchQuery = ref('')
 
-    const filteredMonuments = computed(() => {
-      if (!searchQuery.value) return nearestThree.value.slice(0, 3)
+    const MAX_DISTANCE_KM = 1.5
 
-      return nearestThree.value
-        .filter((m) => m.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
-        .slice(0, 3)
-    })
+const filteredMonuments = computed(() => {
+  const withinRadius = nearestThree.value.filter(
+    (m) => m.distance <= MAX_DISTANCE_KM
+  )
+
+  if (!searchQuery.value) return withinRadius.slice(0, 3)
+
+  return withinRadius
+    .filter((m) =>
+      m.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+    .slice(0, 3)
+})
 
     function updateNearest(list: Monument[]) {
       nearestThree.value = list
